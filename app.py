@@ -1,10 +1,16 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS   # ✅ ADD THIS
 import swisseph as swe
 import datetime
 
 app = Flask(__name__)
+CORS(app)   # ✅ ADD THIS
 
 swe.set_ephe_path('.')
+
+@app.route('/')
+def home():
+    return "Kundali API running"
 
 @app.route('/api/kundali', methods=['POST'])
 def kundali():
