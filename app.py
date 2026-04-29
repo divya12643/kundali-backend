@@ -1,63 +1,79 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 import swisseph as swe
 import datetime
 
 app = Flask(__name__)
-CORS(app)
 
+# Ephemeris path
 swe.set_ephe_path('.')
 
-@app.route('/')
-def home():
-    return "Kundali API running"
+# ✅ Vedic (Lahiri)
+swe.set_sid_mode(swe.SIDM_LAHIRI)
+FLAGS = swe.FLG_SIDEREAL
+
 
 @app.route('/api/kundali', methods=['POST'])
 def kundali():
-
-    dob = request.form.get("dob")
-    time = request.form.get("birth_time")
-
-    if not dob or not time:
-        return jsonify({"error": "missing data"})
-
-    # FIXED TIME PARSE
     try:
-        dt = datetime.datetime.strptime(dob + " " + time, "%Y-%m-%d %H:%M:%S")
-    except:
-        dt = datetime.datetime.strptime(dob + " " + time, "%Y-%m-%d %H:%M")
+        dob = request.form.get("dob")
+        time = request.form.get("birth_time")
 
-    jd = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute/60.0)
+        if not dob or not time:
+            return jsonify({"error": "missing data"})
 
-    planets = {
-        "sun": swe.calc_ut(jd, swe.SUN)[0][0],
-        "moon": swe.calc_ut(jd, swe.MOON)[0][0],
-        "mars": swe.calc_ut(jd, swe.MARS)[0][0],
-        "mercury": swe.calc_ut(jd, swe.MERCURY)[0][0],
-        "jupiter": swe.calc_ut(jd, swe.JUPITER)[0][0],
-        "venus": swe.calc_ut(jd, swe.VENUS)[0][0],
-        "saturn": swe.calc_ut(jd, swe.SATURN)[0][0],
-    }
+        # Parse datetime
+        try:
+            dt = datetime.datetime.strptime(dob + " " + time, "%Y-%m-%d %H:%M:%S")
+        except:
+            dt = datetime.datetime.strptime(dob + " " + time, "%Y-%m-%d %H:%M")
 
-    rahu = swe.calc_ut(jd, swe.MEAN_NODE)[0][0]
-    ketu = (rahu + 180) % 360
+        # ✅ IST → UTC
+        dt_utc = dt - datetime.timedelta(hours=5, minutes=30)
 
-    planets["rahu"] = rahu
-    planets["ketu"] = ketu
+        # Julian Day
+        jd = swe.julday(
+            dt_utc.year,
+            dt_utc.month,
+            dt_utc.day,
+            dt_utc.hour + dt_utc.minute / 60.0
+        )
 
-    # FIXED LOCATION (Pune)
-    lat = 18.5204
-    lon = 73.8567
+        # Planets (SIDEREAL)
+        planets = {
+            "sun": swe.calc_ut(jd, swe.SUN, FLAGS)[0][0],
+            "moon": swe.calc_ut(jd, swe.MOON, FLAGS)[0][0],
+            "mars": swe.calc_ut(jd, swe.MARS, FLAGS)[0][0],
+            "mercury": swe.calc_ut(jd, swe.MERCURY, FLAGS)[0][0],
+            "jupiter": swe.calc_ut(jd, swe.JUPITER, FLAGS)[0][0],
+            "venus": swe.calc_ut(jd, swe.VENUS, FLAGS)[0][0],
+            "saturn": swe.calc_ut(jd, swe.SATURN, FLAGS)[0][0],
+        }
 
-    houses = swe.houses(jd, lat, lon)
+        # Rahu / Ketu
+        rahu = swe.calc_ut(jd, swe.MEAN_NODE, FLAGS)[0][0]
+        ketu = (rahu + 180) % 360
 
-    # FIXED LAGNA (DEGREE)
-    lagna = houses[0][0]
+        planets["rahu"] = rahu
+        planets["ketu"] = ketu
 
-    return jsonify({
-        "lagna": lagna,
-        "planets": planets
-    })
+        # Pune (for now)
+        lat = 18.5204
+        lon = 73.8567
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=10000)
+        # Houses (SIDEREAL)
+        houses = swe.houses_ex(jd, lat, lon, b'A', FLAGS)
+
+        # Lagna degree
+        lagna = houses[1][0]
+
+        return jsonify({
+            "lagna": lagna,
+            "planets": planets
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=10000)
