@@ -21,6 +21,9 @@ def kundali():
     if not dob or not time:
         return jsonify({"error": "missing data"})
 
+   try:
+    dt = datetime.datetime.strptime(dob + " " + time, "%Y-%m-%d %H:%M:%S")
+except:
     dt = datetime.datetime.strptime(dob + " " + time, "%Y-%m-%d %H:%M")
 
     jd = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute/60.0)
