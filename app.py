@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS   # ✅ ADD THIS
+from flask_cors import CORS
 import swisseph as swe
 import datetime
 
 app = Flask(__name__)
-CORS(app)   # ✅ ADD THIS
+CORS(app)
 
 swe.set_ephe_path('.')
 
@@ -21,10 +21,11 @@ def kundali():
     if not dob or not time:
         return jsonify({"error": "missing data"})
 
-   try:
-    dt = datetime.datetime.strptime(dob + " " + time, "%Y-%m-%d %H:%M:%S")
-except:
-    dt = datetime.datetime.strptime(dob + " " + time, "%Y-%m-%d %H:%M")
+    # ✅ FIXED TIME PARSE
+    try:
+        dt = datetime.datetime.strptime(dob + " " + time, "%Y-%m-%d %H:%M:%S")
+    except:
+        dt = datetime.datetime.strptime(dob + " " + time, "%Y-%m-%d %H:%M")
 
     jd = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute/60.0)
 
@@ -44,8 +45,14 @@ except:
     planets["rahu"] = rahu
     planets["ketu"] = ketu
 
-    houses = swe.houses(jd, 18.5204, 73.8567)
-    lagna = int(houses[0][0] / 30) + 1
+    # Pune (temporary fixed location)
+    lat = 18.5204
+    lon = 73.8567
+
+    houses = swe.houses(jd, lat, lon)
+
+    # ✅ RETURN DEGREE (IMPORTANT)
+    lagna = houses[0][0]
 
     return jsonify({
         "lagna": lagna,
