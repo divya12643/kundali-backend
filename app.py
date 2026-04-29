@@ -21,7 +21,7 @@ def kundali():
     if not dob or not time:
         return jsonify({"error": "missing data"})
 
-    # ✅ FIXED TIME PARSE
+    # FIXED TIME PARSE
     try:
         dt = datetime.datetime.strptime(dob + " " + time, "%Y-%m-%d %H:%M:%S")
     except:
@@ -45,13 +45,13 @@ def kundali():
     planets["rahu"] = rahu
     planets["ketu"] = ketu
 
-    # Pune (temporary fixed location)
+    # FIXED LOCATION (Pune)
     lat = 18.5204
     lon = 73.8567
 
     houses = swe.houses(jd, lat, lon)
 
-    # ✅ RETURN DEGREE (IMPORTANT)
+    # FIXED LAGNA (DEGREE)
     lagna = houses[0][0]
 
     return jsonify({
@@ -60,4 +60,4 @@ def kundali():
     })
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host='0.0.0.0', port=10000)
