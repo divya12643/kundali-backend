@@ -1,15 +1,23 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import swisseph as swe
 import datetime
 
 app = Flask(__name__)
+CORS(app)  # ✅ FIX: allow frontend requests
 
 # Ephemeris path
 swe.set_ephe_path('.')
 
-# ✅ Vedic (Lahiri)
+# Vedic (Lahiri)
 swe.set_sid_mode(swe.SIDM_LAHIRI)
 FLAGS = swe.FLG_SIDEREAL
+
+
+# ✅ Health check (optional but useful)
+@app.route('/')
+def home():
+    return "Backend Running"
 
 
 @app.route('/api/kundali', methods=['POST'])
@@ -27,7 +35,7 @@ def kundali():
         except:
             dt = datetime.datetime.strptime(dob + " " + time, "%Y-%m-%d %H:%M")
 
-        # ✅ IST → UTC
+        # IST → UTC
         dt_utc = dt - datetime.timedelta(hours=5, minutes=30)
 
         # Julian Day
@@ -56,11 +64,11 @@ def kundali():
         planets["rahu"] = rahu
         planets["ketu"] = ketu
 
-        # Pune (for now)
+        # Location (Pune for now)
         lat = 18.5204
         lon = 73.8567
 
-        # Houses (SIDEREAL)
+        # Houses (SIDEREAL, Vedic system)
         houses = swe.houses_ex(jd, lat, lon, b'A', FLAGS)
 
         # Lagna degree
