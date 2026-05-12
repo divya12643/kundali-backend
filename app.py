@@ -68,11 +68,15 @@ def kundali():
         lat = 18.5204
         lon = 73.8567
 
-        # Houses (SIDEREAL, Vedic system)
-        houses = swe.houses_ex(jd, lat, lon, b'A', FLAGS)
+       cusps, ascmc = swe.houses_ex(
+    jd,
+    lat,
+    lon,
+    b'P',
+    swe.FLG_SIDEREAL
+)
 
-        # Lagna degree
-        lagna = houses[1][0]
+lagna = ascmc[0]
 
         return jsonify({
             "lagna": lagna,
