@@ -4,17 +4,18 @@ import swisseph as swe
 import datetime
 
 app = Flask(__name__)
-CORS(app)  # ✅ FIX: allow frontend requests
+CORS(app)
 
 # Ephemeris path
 swe.set_ephe_path('.')
 
-# Vedic (Lahiri)
+# Lahiri ayanamsha
 swe.set_sid_mode(swe.SIDM_LAHIRI)
+
 FLAGS = swe.FLG_SIDEREAL
 
 
-# ✅ Health check (optional but useful)
+# Health check
 @app.route('/')
 def home():
     return "Backend Running"
@@ -22,18 +23,27 @@ def home():
 
 @app.route('/api/kundali', methods=['POST'])
 def kundali():
+
     try:
         dob = request.form.get("dob")
         time = request.form.get("birth_time")
 
         if not dob or not time:
-            return jsonify({"error": "missing data"})
+            return jsonify({
+                "error": "missing data"
+            })
 
         # Parse datetime
         try:
-            dt = datetime.datetime.strptime(dob + " " + time, "%Y-%m-%d %H:%M:%S")
+            dt = datetime.datetime.strptime(
+                dob + " " + time,
+                "%Y-%m-%d %H:%M:%S"
+            )
         except:
-            dt = datetime.datetime.strptime(dob + " " + time, "%Y-%m-%d %H:%M")
+            dt = datetime.datetime.strptime(
+                dob + " " + time,
+                "%Y-%m-%d %H:%M"
+            )
 
         # IST → UTC
         dt_utc = dt - datetime.timedelta(hours=5, minutes=30)
@@ -43,10 +53,10 @@ def kundali():
             dt_utc.year,
             dt_utc.month,
             dt_utc.day,
-            dt_utc.hour + dt_utc.minute / 60.0
+            dt_utc.hour + (dt_utc.minute / 60.0)
         )
 
-        # Planets (SIDEREAL)
+        # Planets
         planets = {
             "sun": swe.calc_ut(jd, swe.SUN, FLAGS)[0][0],
             "moon": swe.calc_ut(jd, swe.MOON, FLAGS)[0][0],
@@ -58,25 +68,31 @@ def kundali():
         }
 
         # Rahu / Ketu
-        rahu = swe.calc_ut(jd, swe.MEAN_NODE, FLAGS)[0][0]
+        rahu = swe.calc_ut(
+            jd,
+            swe.MEAN_NODE,
+            FLAGS
+        )[0][0]
+
         ketu = (rahu + 180) % 360
 
         planets["rahu"] = rahu
         planets["ketu"] = ketu
 
-        # Location (Pune for now)
+        # Pune coordinates
         lat = 18.5204
         lon = 73.8567
 
-       cusps, ascmc = swe.houses_ex(
-    jd,
-    lat,
-    lon,
-    b'P',
-    swe.FLG_SIDEREAL
-)
+        # Houses + Lagna
+        cusps, ascmc = swe.houses_ex(
+            jd,
+            lat,
+            lon,
+            b'P',
+            swe.FLG_SIDEREAL
+        )
 
-lagna = ascmc[0]
+        lagna = ascmc[0]
 
         return jsonify({
             "lagna": lagna,
@@ -84,7 +100,9 @@ lagna = ascmc[0]
         })
 
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({
+            "error": str(e)
+        })
 
 
 if __name__ == '__main__':
